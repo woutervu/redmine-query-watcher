@@ -19,9 +19,7 @@ type MockIssueService struct {
 
 func TestGetIssueByIdExistingIssue(t *testing.T) {
 	is := getMockService()
-	is.generateIssues(500)
-	is.generateIssues(500)
-	is.generateIssues(500)
+	is.generateIssues(5)
 	issue := is.IssueCollection[0]
 
 	fetchedIssue, err := is.GetIssueById(issue.Id)
@@ -30,20 +28,20 @@ func TestGetIssueByIdExistingIssue(t *testing.T) {
 	}
 
 	if fetchedIssue == nil {
-		t.Errorf("Expected Issue with ID `%s`, got nil.", issue.Id)
+		t.Errorf("Expected Issue with ID `%d`, got nil.", issue.Id)
 	}
 
 	if fetchedIssue != nil && fetchedIssue.Id != issue.Id {
-		t.Errorf("Expected Issue with ID `%s`, got %s.", issue.Id, fetchedIssue.Id)
+		t.Errorf("Expected Issue with ID `%d`, got %d.", issue.Id, fetchedIssue.Id)
 	}
 }
 
 func TestGetIssueByIdNonExistentIssue(t *testing.T) {
 	is := getMockService()
-	issueId := "145678"
+	issueId := 145678
 	fetchedIssue, err := is.GetIssueById(issueId)
 	if fetchedIssue != nil && err == nil {
-		t.Errorf("Expected nil *Issue, got issue with ID `%s`", fetchedIssue.Id)
+		t.Errorf("Expected nil *Issue, got issue with ID `%d`", fetchedIssue.Id)
 	}
 }
 
@@ -79,14 +77,14 @@ func TestGetIssuesByQueryIdNonExistent(t *testing.T) {
 	}
 }
 
-func (m *MockIssueService) GetIssueById(id string) (*Issue, error) {
+func (m *MockIssueService) GetIssueById(id int) (*Issue, error) {
 	for _, issue := range m.IssueCollection {
 		if issue.Id == id {
 			return issue, nil
 		}
 	}
 
-	return nil, fmt.Errorf("Issue with ID `%s` not found.", id)
+	return nil, fmt.Errorf("Issue with ID `%d` not found.", id)
 }
 
 func (m *MockIssueService) GetIssuesByQueryId(queryId int) ([]*Issue, error) {
@@ -114,7 +112,7 @@ func (m *MockIssueService) generateIssues(amount int) {
 	for i := 0; i < amount; i++ {
 		m.CurrentId = m.CurrentId + 1
 		issue := Issue{
-			Id:          strconv.Itoa(m.CurrentId),
+			Id:          m.CurrentId,
 			ProjectCode: projectCodes[rand.Intn(4)],
 			Subject:     "Test issue #" + strconv.Itoa(m.CurrentId),
 			Status:      status(rand.Intn(4)),
