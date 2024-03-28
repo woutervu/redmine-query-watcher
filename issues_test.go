@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type IssueCol []*Issue
@@ -18,63 +20,51 @@ type MockIssueService struct {
 }
 
 func TestGetIssueByIdExistingIssue(t *testing.T) {
+	assert := assert.New(t)
+
 	is := getMockService()
 	is.generateIssues(5)
 	issue := is.IssueCollection[0]
 
 	fetchedIssue, err := is.GetIssueById(issue.Id)
-	if err != nil {
-		t.Errorf("Expected *Issue, got error: %s", err)
-	}
 
-	if fetchedIssue == nil {
-		t.Errorf("Expected Issue with ID `%d`, got nil.", issue.Id)
-	}
-
-	if fetchedIssue != nil && fetchedIssue.Id != issue.Id {
-		t.Errorf("Expected Issue with ID `%d`, got %d.", issue.Id, fetchedIssue.Id)
-	}
+	assert.NotNil(fetchedIssue)
+	assert.Nil(err)
+	assert.Equal(issue, fetchedIssue)
 }
 
 func TestGetIssueByIdNonExistentIssue(t *testing.T) {
+	assert := assert.New(t)
+
 	is := getMockService()
 	issueId := 145678
 	fetchedIssue, err := is.GetIssueById(issueId)
-	if fetchedIssue != nil && err == nil {
-		t.Errorf("Expected nil *Issue, got issue with ID `%d`", fetchedIssue.Id)
-	}
+	assert.Nil(fetchedIssue)
+	assert.Error(err)
 }
 
 func TestGetIssuesByQueryIdExistent(t *testing.T) {
+	assert := assert.New(t)
+
 	is := getMockService()
 	queryId := 1359
-	amount := 5
-	is.generateQueryIdWithIssues(queryId, amount)
+	is.generateQueryIdWithIssues(queryId, 5)
+	expected := is.QueryCollection[queryId]
 
 	issues, err := is.GetIssuesByQueryId(queryId)
-	if err != nil {
-		t.Errorf("Expected []*Issue, got error: %s", err)
-	}
-
-	if len(issues) != amount {
-		t.Errorf("Expected %d issues, got %d", amount, len(issues))
-	}
+	assert.Equal(expected, issues)
+	assert.Nil(err)
 }
 
 func TestGetIssuesByQueryIdNonExistent(t *testing.T) {
+	assert := assert.New(t)
+
 	is := getMockService()
-	queryId := 1359
-	amount := 1
-	is.generateQueryIdWithIssues(queryId, amount)
+	is.generateQueryIdWithIssues(1359, 1)
 
-	issues, err := is.GetIssuesByQueryId(queryId + 1)
-	if issues != nil {
-		t.Errorf("Expected error, got []*Issue with `%d` items.", len(issues))
-	}
-
-	if err == nil {
-		t.Error("Expected error, got nil.")
-	}
+	issues, err := is.GetIssuesByQueryId(1234)
+	assert.Nil(issues)
+	assert.Error(err)
 }
 
 func (m *MockIssueService) GetIssueById(id int) (*Issue, error) {
@@ -99,7 +89,8 @@ func (m *MockIssueService) GetIssuesByQueryId(queryId int) ([]*Issue, error) {
 
 func getMockService() MockIssueService {
 	return MockIssueService{
-		CurrentId: 100000,
+		CurrentId:       100000,
+		QueryCollection: make(QueryCol),
 	}
 }
 
@@ -124,9 +115,23 @@ func (m *MockIssueService) generateIssues(amount int) {
 }
 
 func (m *MockIssueService) generateQueryIdWithIssues(queryId int, amount int) {
-	if len(m.IssueCollection) < amount {
-		m.generateIssues(amount - len(m.IssueCollection))
+	if amount <= 0 {
+		return
 	}
-	m.QueryCollection = make(QueryCol)
-	m.QueryCollection[queryId] = append(m.QueryCollection[queryId], m.IssueCollection[:amount]...)
+
+	lastIndex := len(m.IssueCollection)
+	if lastIndex > 0 {
+		lastIndex = lastIndex - 1
+	}
+
+	m.generateIssues(amount)
+
+	from := lastIndex
+	to := lastIndex + amount
+	if lastIndex > 0 {
+		from = from + 1
+		to = to + 1
+	}
+
+	m.QueryCollection[queryId] = append(m.QueryCollection[queryId], m.IssueCollection[from:to]...)
 }
