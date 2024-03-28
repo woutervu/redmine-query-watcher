@@ -9,11 +9,19 @@ func main() {
 		return
 	}
 
-	is, err := rs.GetIssuesByQueryId(1274)
+	c, err := getConfig()
 	if err != nil {
 		fmt.Println(err.Error())
 		return
 	}
 
-	fmt.Println(is)
+	is, err := rs.GetIssuesByQueryId(c.QueryId)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	for _, issue := range is {
+		fmt.Println(issue)
+	}
 }

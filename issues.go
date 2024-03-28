@@ -30,10 +30,9 @@ type IssueServiceInterface interface {
 }
 
 type RedmineService struct {
-	Config *Config
+	Config        *Config
+	RedmineClient *redmine.Client
 }
-
-var client *redmine.Client
 
 func (r *RedmineService) GetIssueById(id int) (*Issue, error) {
 	client, err := r.getClient()
@@ -55,17 +54,43 @@ func (r *RedmineService) GetIssueById(id int) (*Issue, error) {
 }
 
 func (r *RedmineService) GetIssuesByQueryId(queryId int) ([]*Issue, error) {
-	return nil, nil
+	client, err := r.getClient()
+	if err != nil {
+		return nil, err
+	}
+
+	ris, err := client.IssuesByQuery(r.Config.QueryId)
+	if err != nil {
+		return nil, err
+	}
+
+	c := len(ris)
+	issues := make([]*Issue, c)
+
+	for i, issue := range ris {
+		ti, err := r.transformIssue(&issue)
+		if err != nil {
+			return nil, err
+		}
+
+		issues[i] = ti
+	}
+
+	return issues, nil
 }
 
 func (r *RedmineService) getClient() (*redmine.Client, error) {
+	if r.RedmineClient != nil {
+		return r.RedmineClient, nil
+	}
+
 	if r.Config == nil {
 		return nil, fmt.Errorf("config was not properly set")
 	}
 
-	client = redmine.NewClient(r.Config.RedmineURL, r.Config.RedmineToken)
+	r.RedmineClient = redmine.NewClient(r.Config.RedmineURL, r.Config.RedmineToken)
 
-	return client, nil
+	return r.RedmineClient, nil
 }
 
 func (r *RedmineService) transformIssue(ri *redmine.Issue) (*Issue, error) {
