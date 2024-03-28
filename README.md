@@ -5,3 +5,4 @@
 * View selected issue details by pressing the `tab` key (todo).
 * Open Redmine issue in browser by pressing `enter` on the selected issue (todo).
 * Fully unit tested using sketchr/testify.
+    * Replace mocks with sketchr/testify mocks (todo).
