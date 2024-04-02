@@ -1,27 +1,40 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+)
+
+type model struct {
+	Tabs        []string
+	Table       table.Model
+	Issues      []*Issue
+	ActiveIssue *Issue
+	activeTab   int
+}
 
 func main() {
-	rs, err := getRedmineService()
+	ec, err := appRun()
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		fmt.Printf("Exit code: %d\nMessage: %s", ec, err)
+		os.Exit(ec)
 	}
 
-	c, err := getConfig()
+	os.Exit(ec)
+}
+
+func appRun() (int, error) {
+	m, err := getModel()
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		return 1, err
 	}
 
-	is, err := rs.GetIssuesByQueryId(c.QueryId)
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+	if _, err := tea.NewProgram(m).Run(); err != nil {
+		return 1, err
 	}
 
-	for _, issue := range is {
-		fmt.Println(issue)
-	}
+	return 0, nil
 }

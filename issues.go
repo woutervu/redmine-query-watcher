@@ -22,6 +22,7 @@ const (
 	OnHold
 	Solved
 	Closed
+	Unknown
 )
 
 type IssueServiceInterface interface {
@@ -107,22 +108,43 @@ func (r *RedmineService) transformIssue(ri *redmine.Issue) (*Issue, error) {
 		Id:          ri.Id,
 		ProjectCode: ri.Project.Name[:3],
 		Subject:     ri.Subject,
-		Status:      r.getStatus(ri.Status.Id),
+		Status:      getStatus(ri.Status),
 		Assignee:    assignedToName,
 	}
 
 	return &issue, nil
 }
 
-func (r *RedmineService) getStatus(statusId int) status {
-	return status(statusId)
+func getStatus(redmineStatus *redmine.IdName) status {
+	switch redmineStatus.Name {
+	case "New":
+		return New
+	case "Support: solved":
+		return Solved
+	case "Support: on hold":
+		return OnHold
+	case "Support: in progress":
+		return InProgress
+	case "Closed":
+		return Closed
+	}
+	return Unknown
 }
 
+var redmineServiceInstance *RedmineService
+
 func getRedmineService() (*RedmineService, error) {
+	if redmineServiceInstance != nil {
+		return redmineServiceInstance, nil
+	}
+
 	config, err := getConfig()
 	if err != nil {
 		return nil, err
 	}
 
-	return &RedmineService{Config: config}, nil
+	rs := RedmineService{Config: config}
+	redmineServiceInstance = &rs
+
+	return redmineServiceInstance, nil
 }
