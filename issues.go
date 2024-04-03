@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"math/rand"
 
 	"github.com/mattn/go-redmine"
 )
+
+var anon bool = true
 
 type Issue struct {
 	Id          int
@@ -24,6 +27,8 @@ const (
 	Closed
 	Unknown
 )
+
+var redmineServiceInstance *RedmineService
 
 type IssueServiceInterface interface {
 	GetIssueById(id int) (*Issue, error)
@@ -112,7 +117,25 @@ func (r *RedmineService) transformIssue(ri *redmine.Issue) (*Issue, error) {
 		Assignee:    assignedToName,
 	}
 
+	if anon == true {
+		issue.anonymizeIssue()
+	}
+
 	return &issue, nil
+}
+
+func (i *Issue) anonymizeIssue() {
+	id := rand.Intn(199999) + 100000
+	pcs := []string{"ABC", "DEF", "GHI", "JKL"}
+	sub := []string{"Can't login!", "Issue with customer", "HTTP 500 error on checkout", "URGENT: DEADLOCK ERRORS"}
+	st := []status{New, InProgress, OnHold, Solved}
+	as := []string{"John Doe", "Jane Doe", "Walter White", "Jesse Pinkman", "Leslie Pollos"}
+
+	i.Id = id
+	i.ProjectCode = getRandomString(pcs)
+	i.Subject = getRandomString(sub)
+	i.Status = getRandomStatus(st)
+	i.Assignee = getRandomString(as)
 }
 
 func getStatus(redmineStatus *redmine.IdName) status {
@@ -131,8 +154,6 @@ func getStatus(redmineStatus *redmine.IdName) status {
 	return Unknown
 }
 
-var redmineServiceInstance *RedmineService
-
 func getRedmineService() (*RedmineService, error) {
 	if redmineServiceInstance != nil {
 		return redmineServiceInstance, nil
@@ -147,4 +168,26 @@ func getRedmineService() (*RedmineService, error) {
 	redmineServiceInstance = &rs
 
 	return redmineServiceInstance, nil
+}
+
+func getRandomString(s []string) string {
+	length := len(s)
+	if length == 0 {
+		return ""
+	}
+
+	index := rand.Intn(length - 1)
+
+	return s[index]
+}
+
+func getRandomStatus(st []status) status {
+	length := len(st)
+	if length == 0 {
+		return Unknown
+	}
+
+	index := rand.Intn(length - 1)
+
+	return st[index]
 }

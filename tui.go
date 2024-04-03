@@ -10,6 +10,20 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+type model struct {
+	Tabs        []string
+	Table       table.Model
+	Issues      []*Issue
+	ActiveIssue *Issue
+	activeTab   int
+}
+
+func getTeaProgram(m model) (*tea.Program, error) {
+	tp := tea.NewProgram(m)
+
+	return tp, nil
+}
+
 func getModel() (model, error) {
 	tabs := []string{"Issues", "Details"}
 
@@ -44,11 +58,6 @@ func getModel() (model, error) {
 		Bold(false)
 	m.Table.SetStyles(s)
 
-	err := m.setRows()
-	if err != nil {
-		return m, err
-	}
-
 	return m, nil
 }
 
@@ -58,6 +67,9 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case Msg:
+		is := <-issueChannel
+		m.updateRows(is)
 	case tea.KeyMsg:
 		switch keypress := msg.String(); keypress {
 		case "ctrl+c", "q":
@@ -74,6 +86,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if m.activeTab == 0 {
 		t, cmd := m.Table.Update(msg)
 		m.Table = t
+
+		if m.Table.SelectedRow() == nil {
+			return m, cmd
+		}
+
 		issueIdString := m.Table.SelectedRow()[0]
 		activeIssueId, err := strconv.Atoi(issueIdString)
 		if err == nil {
@@ -187,16 +204,8 @@ func (m model) getDetailsTabContent() string {
 	return content
 }
 
-func (m *model) setRows() error {
-	is, err := getRedmineService()
-	if err != nil {
-		return err
-	}
-
-	m.Issues, err = is.GetIssuesByQueryId(is.Config.QueryId)
-	if err != nil {
-		return err
-	}
+func (m *model) updateRows(is []*Issue) error {
+	m.Issues = is
 
 	var rows []table.Row
 	for i := 0; i < len(m.Issues); i++ {

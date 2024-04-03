@@ -3,18 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"github.com/charmbracelet/bubbles/table"
-	tea "github.com/charmbracelet/bubbletea"
+	"time"
 )
 
-type model struct {
-	Tabs        []string
-	Table       table.Model
-	Issues      []*Issue
-	ActiveIssue *Issue
-	activeTab   int
-}
+type Msg string
+
+var lastUpdate int64 = time.Now().Unix() - 30
+var issueChannel chan []*Issue = make(chan []*Issue, 1)
 
 func main() {
 	ec, err := appRun()
@@ -32,7 +27,37 @@ func appRun() (int, error) {
 		return 1, err
 	}
 
-	if _, err := tea.NewProgram(m).Run(); err != nil {
+	tp, err := getTeaProgram(m)
+	if err != nil {
+		return 1, err
+	}
+
+	rs, err := getRedmineService()
+	if err != nil {
+		return 1, err
+	}
+
+	go func() {
+		for {
+			now := time.Now().Unix()
+			nextRun := lastUpdate + 30
+			timeToSleep := 30
+			if now < nextRun {
+				timeToSleep = int(lastUpdate) - int(now)
+				time.Sleep(time.Second * time.Duration(timeToSleep))
+			}
+
+			ri, _ := rs.GetIssuesByQueryId(rs.Config.QueryId)
+			issueChannel <- ri
+			tp.Send(Msg("U"))
+
+			lastUpdate = time.Now().Unix()
+		}
+	}()
+
+	_, err = tp.Run()
+
+	if err != nil {
 		return 1, err
 	}
 
